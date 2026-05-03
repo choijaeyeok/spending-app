@@ -304,8 +304,7 @@ def load_csv_or_empty(path: Path, columns: List[str]) -> pd.DataFrame:
     return pd.DataFrame(columns=columns)
 
 def save_records():
-    st.session_state.transaction_records.to_csv(TRANSACTION_CSV, index=False)
-    st.session_state.receipt_records.to_csv(RECEIPT_CSV, index=False)
+    pass
 
 @st.cache_resource
 def load_chatbot_model():
@@ -563,10 +562,10 @@ footer { visibility: hidden !important; }
 
 if "chat_history" not in st.session_state: st.session_state.chat_history = []
 if "last_df" not in st.session_state: st.session_state.last_df = pd.DataFrame(columns=["수입", "지출", "잔액"])
-if "receipt_records" not in st.session_state: 
-    st.session_state.receipt_records = load_csv_or_empty(RECEIPT_CSV, ["메뉴", "추정금액", "카테고리", "OCR원문"])
-if "transaction_records" not in st.session_state: 
-    st.session_state.transaction_records = load_csv_or_empty(TRANSACTION_CSV, ["날짜", "구분", "카테고리", "금액", "메모"])
+if "receipt_records" not in st.session_state:
+    st.session_state.receipt_records = pd.DataFrame(columns=["메뉴", "추정금액", "카테고리", "OCR원문"])
+if "transaction_records" not in st.session_state:
+    st.session_state.transaction_records = pd.DataFrame(columns=["날짜", "구분", "카테고리", "금액", "메모"])
 if "last_ocr_result" not in st.session_state: st.session_state.last_ocr_result = None
 if "ocr_results" not in st.session_state: st.session_state.ocr_results = []
 
