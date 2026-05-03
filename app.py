@@ -590,9 +590,11 @@ reset_arrow = "▲" if st.session_state.show_reset else "▼"
 if btn1.button(f"💰 예산 설정 {budget_arrow}", use_container_width=True, key="budget_btn"):
     st.session_state.show_budget = not st.session_state.show_budget
     st.session_state.show_reset = False
+    st.rerun()
 if btn2.button(f"🔄 초기화 {reset_arrow}", use_container_width=True, key="reset_btn"):
     st.session_state.show_reset = not st.session_state.show_reset
     st.session_state.show_budget = False
+    st.rerun()
 
 if st.session_state.show_budget:
     with st.container(border=True):
