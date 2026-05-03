@@ -550,13 +550,17 @@ def local_finance_chatbot(user_input: str, total_income: int, total_expense: int
 
     return random.choice(RESPONSES.get(category, ["소비 관련 질문을 해주세요."]))
 
-st.set_page_config(page_title="자취생 소비 관리", page_icon="💸", layout="wide")
+st.set_page_config(page_title="자취생 소비 관리", page_icon="💸", layout="wide", menu_items={})
 st.markdown("""
 <style>
 .block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1180px; }
 .hero-card { background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%); color: white; border-radius: 18px; padding: 20px 24px; margin-bottom: 14px; }
 .section-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
 .small-muted { font-size: 0.9rem; color: #6b7280; margin-top: -4px; }
+[data-testid="stToolbar"] { visibility: hidden !important; }
+[data-testid="stDecoration"] { display: none !important; }
+.stDeployButton { display: none !important; }
+footer { visibility: hidden !important; }
 </style>
 """, unsafe_allow_html=True)
 
