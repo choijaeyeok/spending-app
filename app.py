@@ -610,28 +610,21 @@ with st.sidebar:
             save_records()
             st.success("마지막 영수증 기록을 삭제했어요.")
 
-left_col, right_col = st.columns([1.2, 1], gap="large")
+transactions = st.session_state.transaction_records.copy()
+total_income = int(transactions[transactions["구분"] == "수입"]["금액"].sum())
+total_expense = int(transactions[transactions["구분"] == "지출"]["금액"].sum())
+total_balance = total_income - total_expense
+budgets = {"식비": budget_food, "교통": budget_transport, "생활": budget_life, "구독": budget_sub}
 
-with left_col:
-    transactions = st.session_state.transaction_records.copy()
-    total_income = int(transactions[transactions["구분"] == "수입"]["금액"].sum())
-    total_expense = int(transactions[transactions["구분"] == "지출"]["금액"].sum())
-    total_balance = total_income - total_expense
-    
+tab1, tab2, tab3, tab4 = st.tabs(["📅 입출금 내역", "🎯 예산/목표", "🤖 챗봇", "📷 영수증 OCR"])
+
+with tab1:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.subheader("📅 날짜별 입출금 내역")
-    st.markdown('<p class="small-muted">토스처럼 날짜 기준으로 수입/지출 흐름을 기록하고 확인할 수 있어요.</p>', unsafe_allow_html=True)
-    
-    t1, t2 = st.columns(2)
-    with t1:
-        tx_date = st.date_input("거래 날짜", value=date.today())
-        tx_type = st.selectbox("구분", options=["수입", "지출"])
-    with t2:
-        tx_category = st.selectbox("카테고리", options=["식비", "교통", "생활", "구독", "월급", "용돈", "기타"])
-        tx_amount = st.number_input("금액 (원)", min_value=0, step=1000, format="%d", key="tx_amount")
-    
+    tx_date = st.date_input("거래 날짜", value=date.today())
+    tx_type = st.selectbox("구분", options=["수입", "지출"])
+    tx_category = st.selectbox("카테고리", options=["식비", "교통", "생활", "구독", "월급", "용돈", "기타"])
+    tx_amount = st.number_input("금액 (원)", min_value=0, step=1000, format="%d", key="tx_amount")
     tx_memo = st.text_input("메모(선택)", placeholder="예: 점심, 카페, 알바비")
-    
     if st.button("내역 추가", use_container_width=True):
         if tx_amount <= 0:
             st.warning("금액은 1원 이상 입력해주세요.")
@@ -642,35 +635,28 @@ with left_col:
             st.session_state.transaction_records = pd.concat([st.session_state.transaction_records, new_tx], ignore_index=True)
             save_records()
             st.rerun()
-    
     tx_df = st.session_state.transaction_records.copy()
     if not tx_df.empty:
         tx_df["날짜"] = pd.to_datetime(tx_df["날짜"])
         tx_df["금액"] = pd.to_numeric(tx_df["금액"], errors="coerce").fillna(0).astype(int)
-        
         daily = (tx_df.assign(
             수입금액=tx_df.apply(lambda row: row["금액"] if row["구분"] == "수입" else 0, axis=1),
             지출금액=tx_df.apply(lambda row: row["금액"] if row["구분"] == "지출" else 0, axis=1),
         ).groupby(tx_df["날짜"].dt.date)[["수입금액", "지출금액"]].sum().reset_index().rename(columns={"날짜": "일자"}))
         daily["순변동"] = daily["수입금액"] - daily["지출금액"]
         daily["일자표시"] = pd.to_datetime(daily["일자"]).map(lambda d: f"{d.month}/{d.day}")
-        
         st.write("### 일자별 요약")
         st.dataframe(daily[["일자", "수입금액", "지출금액", "순변동"]], use_container_width=True)
-        
-        daily_chart_data = daily[["일자표시", "지출금액"]].copy()
-        daily_chart = (alt.Chart(daily_chart_data).mark_line(point=True).encode(
+        daily_chart = (alt.Chart(daily[["일자표시", "지출금액"]]).mark_line(point=True).encode(
             x=alt.X("일자표시:N", sort=list(daily["일자표시"]), axis=alt.Axis(labelAngle=0, title="일자")),
             y=alt.Y("지출금액:Q", title="지출 금액"),
             tooltip=["일자표시:N", "지출금액:Q"],
         ))
         st.altair_chart(daily_chart, use_container_width=True)
-        
         tx_view = tx_df.sort_values("날짜", ascending=False).copy()
         tx_view["날짜"] = tx_view["날짜"].dt.strftime("%Y-%m-%d")
         st.write("### 거래 내역")
         st.dataframe(tx_view, use_container_width=True)
-        
         st.write("### 반복지출 감지")
         expense_df = tx_df[tx_df["구분"] == "지출"].copy()
         one_week_ago = pd.Timestamp.today() - pd.Timedelta(days=7)
@@ -685,20 +671,17 @@ with left_col:
         st.info("아직 등록된 입출금 내역이 없어요. 위에서 내역을 추가해보세요.")
     st.markdown("</div>", unsafe_allow_html=True)
 
+with tab2:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.subheader("🎯 목표/예산 상태")
     b1, b2, b3 = st.columns(3)
     b1.metric("총 수입", f"{total_income:,}원")
     b2.metric("총 지출", f"{total_expense:,}원")
     b3.metric("총 잔액", f"{total_balance:,}원", delta=f"{(total_income - total_expense):,}원")
-    
     goal_progress = (total_balance / save_goal * 100) if save_goal > 0 else 0
     st.metric("월 저축 목표 달성률", f"{goal_progress:.1f}%")
     if save_goal > 0:
         if total_balance >= save_goal: st.success("목표 저축액을 달성했어요.")
         else: st.info(f"목표까지 {save_goal - total_balance:,}원 남았어요.")
-    
-    budgets = {"식비": budget_food, "교통": budget_transport, "생활": budget_life, "구독": budget_sub}
     tx_budget = st.session_state.transaction_records.copy()
     if not tx_budget.empty:
         tx_budget["금액"] = pd.to_numeric(tx_budget["금액"], errors="coerce").fillna(0).astype(int)
@@ -717,9 +700,8 @@ with left_col:
         st.info("예산 사용률을 보려면 거래 내역을 먼저 추가해주세요.")
     st.markdown("</div>", unsafe_allow_html=True)
 
-with right_col:
+with tab3:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.subheader("🤖 소비 상담 챗봇")
     st.markdown('<p class="small-muted">재정 관리부터 일상 질문까지 AI 비서에게 무엇이든 물어보세요.</p>', unsafe_allow_html=True)
     if not open_chat:
         st.info("사이드바에서 '챗봇 열기'를 켜면 사용할 수 있어요.")
@@ -739,20 +721,19 @@ with right_col:
         if user_input:
             st.session_state.chat_history.append({"role": "user", "content": user_input})
             tx_for_chat = st.session_state.transaction_records.copy()
-            total_income = int(tx_for_chat[tx_for_chat["구분"] == "수입"]["금액"].sum())
-            total_expense = int(tx_for_chat[tx_for_chat["구분"] == "지출"]["금액"].sum())
-            total_balance = total_income - total_expense
+            _income = int(tx_for_chat[tx_for_chat["구분"] == "수입"]["금액"].sum())
+            _expense = int(tx_for_chat[tx_for_chat["구분"] == "지출"]["금액"].sum())
             answer = local_finance_chatbot(
-                user_input, total_income, total_expense, total_balance,
+                user_input, _income, _expense, _income - _expense,
                 tx_df=st.session_state.transaction_records,
-                budgets={"식비": budget_food, "교통": budget_transport, "생활": budget_life, "구독": budget_sub},
+                budgets=budgets,
             )
             st.session_state.chat_history.append({"role": "assistant", "content": answer})
             st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
+with tab4:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.subheader("📷 영수증 OCR 분석")
     st.markdown('<p class="small-muted">영수증 사진을 올리면 텍스트/금액/카테고리를 추정합니다.</p>', unsafe_allow_html=True)
     receipt_files = st.file_uploader("영수증 이미지 업로드", type=["png", "jpg", "jpeg", "webp"], key="receipt_uploader", accept_multiple_files=True)
     st.info("📸 인식률을 높이려면: 영수증을 평평하게 펴고 화면에 꽉차게 정면으로 촬영해주세요.")
