@@ -557,13 +557,7 @@ st.markdown("""
 .hero-card { background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%); color: white; border-radius: 18px; padding: 20px 24px; margin-bottom: 14px; }
 .section-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
 .small-muted { font-size: 0.9rem; color: #6b7280; margin-top: -4px; }
-[data-testid="stToolbar"] { visibility: hidden !important; }
-[data-testid="stDecoration"] { display: none !important; }
-[data-testid="stHeader"] { display: none !important; }
-.stDeployButton { display: none !important; }
 footer { visibility: hidden !important; }
-header { visibility: hidden !important; }
-#MainMenu { visibility: hidden !important; }
 </style>
 """, unsafe_allow_html=True)
 
