@@ -557,6 +557,8 @@ st.markdown("""
 .section-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
 .small-muted { font-size: 0.9rem; color: #6b7280; margin-top: -4px; }
 footer { visibility: hidden !important; }
+[data-testid="stSidebar"] { display: none !important; }
+[data-testid="collapsedControl"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -576,41 +578,35 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-with st.sidebar:
-    groq_key = os.environ.get("GROQ_API_KEY", "")
-    if groq_key and groq_key != "여기에_Groq_키_붙여넣기":
-        st.caption("Groq AI 모드로 동작 중이에요.")
-    else:
-        st.caption("API 키 없이 로컬 챗봇 모드로 동작해요.")
+groq_key = os.environ.get("GROQ_API_KEY", "")
+open_chat = True
 
-    st.markdown("## 💰 예산 설정")
-    budget_food = st.number_input("식비 예산", min_value=0, step=10000, value=300000)
-    budget_transport = st.number_input("교통 예산", min_value=0, step=10000, value=100000)
-    budget_life = st.number_input("생활 예산", min_value=0, step=10000, value=150000)
-    budget_sub = st.number_input("구독 예산", min_value=0, step=10000, value=50000)
-    save_goal = st.number_input("월 저축 목표", min_value=0, step=50000, value=300000)
-    open_chat = st.toggle("💬 챗봇 열기", value=True)
-
-    st.markdown("---")
-    st.markdown("## 🔄 초기화")
-    if st.button("대화 초기화", use_container_width=True):
-        st.session_state.chat_history = []
-        st.success("채팅 기록을 초기화했어요.")
-    if st.button("입출금 내역 초기화", use_container_width=True):
-        st.session_state.transaction_records = pd.DataFrame(columns=["날짜", "구분", "카테고리", "금액", "메모"])
-        save_records()
-        st.success("입출금 내역을 초기화했어요.")
-    if st.button("영수증 기록 초기화", use_container_width=True):
-        st.session_state.receipt_records = pd.DataFrame(columns=["메뉴", "추정금액", "카테고리", "OCR원문"])
-        save_records()
-        st.success("영수증 기록을 초기화했어요.")
+pop1, pop2 = st.columns(2)
+with pop1:
+    with st.popover("💰 예산 설정", use_container_width=True):
+        budget_food = st.number_input("식비 예산", min_value=0, step=10000, value=300000)
+        budget_transport = st.number_input("교통 예산", min_value=0, step=10000, value=100000)
+        budget_life = st.number_input("생활 예산", min_value=0, step=10000, value=150000)
+        budget_sub = st.number_input("구독 예산", min_value=0, step=10000, value=50000)
+        save_goal = st.number_input("월 저축 목표", min_value=0, step=50000, value=300000)
+with pop2:
+    with st.popover("🔄 초기화", use_container_width=True):
+        if st.button("대화 초기화", use_container_width=True):
+            st.session_state.chat_history = []
+            st.success("채팅 기록을 초기화했어요.")
+        if st.button("입출금 내역 초기화", use_container_width=True):
+            st.session_state.transaction_records = pd.DataFrame(columns=["날짜", "구분", "카테고리", "금액", "메모"])
+            save_records()
+            st.success("입출금 내역을 초기화했어요.")
+        if st.button("영수증 기록 초기화", use_container_width=True):
+            st.session_state.receipt_records = pd.DataFrame(columns=["메뉴", "추정금액", "카테고리", "OCR원문"])
+            save_records()
+            st.success("영수증 기록을 초기화했어요.")
 
 transactions = st.session_state.transaction_records.copy()
 total_income = int(transactions[transactions["구분"] == "수입"]["금액"].sum())
 total_expense = int(transactions[transactions["구분"] == "지출"]["금액"].sum())
 total_balance = total_income - total_expense
-
-st.info("⬅️ 왼쪽 상단 **>>** 버튼을 누르면 예산 설정과 초기화 메뉴가 있어요.")
 
 tab1, tab2, tab3, tab4 = st.tabs(["📅 입출금 내역", "🎯 예산/목표", "🤖 챗봇", "📷 영수증 OCR"])
 
