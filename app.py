@@ -583,12 +583,6 @@ with st.sidebar:
         st.caption("Groq AI 모드로 동작 중이에요.")
     else:
         st.caption("API 키 없이 로컬 챗봇 모드로 동작해요.")
-    st.markdown("### 월 예산 설정")
-    budget_food = st.number_input("식비 예산", min_value=0, step=10000, value=300000)
-    budget_transport = st.number_input("교통 예산", min_value=0, step=10000, value=100000)
-    budget_life = st.number_input("생활 예산", min_value=0, step=10000, value=150000)
-    budget_sub = st.number_input("구독 예산", min_value=0, step=10000, value=50000)
-    save_goal = st.number_input("월 저축 목표", min_value=0, step=50000, value=300000)
     open_chat = st.toggle("💬 챗봇 열기", value=True)
     if st.button("대화 초기화", use_container_width=True):
         st.session_state.chat_history = []
@@ -602,19 +596,12 @@ with st.sidebar:
         save_records()
         st.success("영수증 기록을 초기화했어요.")
 
-    if not st.session_state.receipt_records.empty:
-        st.write("### 영수증 분석 기록")
-        st.dataframe(st.session_state.receipt_records[["메뉴", "추정금액", "카테고리"]], use_container_width=True)
-        if st.button("마지막 항목 삭제", use_container_width=True):
-            st.session_state.receipt_records = st.session_state.receipt_records.iloc[:-1].reset_index(drop=True)
-            save_records()
-            st.success("마지막 영수증 기록을 삭제했어요.")
+budget_food = budget_transport = budget_life = budget_sub = save_goal = 0
 
 transactions = st.session_state.transaction_records.copy()
 total_income = int(transactions[transactions["구분"] == "수입"]["금액"].sum())
 total_expense = int(transactions[transactions["구분"] == "지출"]["금액"].sum())
 total_balance = total_income - total_expense
-budgets = {"식비": budget_food, "교통": budget_transport, "생활": budget_life, "구독": budget_sub}
 
 tab1, tab2, tab3, tab4 = st.tabs(["📅 입출금 내역", "🎯 예산/목표", "🤖 챗봇", "📷 영수증 OCR"])
 
@@ -673,6 +660,13 @@ with tab1:
 
 with tab2:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    with st.expander("⚙️ 월 예산 설정", expanded=True):
+        budget_food = st.number_input("식비 예산", min_value=0, step=10000, value=300000, key="budget_food")
+        budget_transport = st.number_input("교통 예산", min_value=0, step=10000, value=100000, key="budget_transport")
+        budget_life = st.number_input("생활 예산", min_value=0, step=10000, value=150000, key="budget_life")
+        budget_sub = st.number_input("구독 예산", min_value=0, step=10000, value=50000, key="budget_sub")
+        save_goal = st.number_input("월 저축 목표", min_value=0, step=50000, value=300000, key="save_goal")
+    budgets = {"식비": budget_food, "교통": budget_transport, "생활": budget_life, "구독": budget_sub}
     b1, b2, b3 = st.columns(3)
     b1.metric("총 수입", f"{total_income:,}원")
     b2.metric("총 지출", f"{total_expense:,}원")
