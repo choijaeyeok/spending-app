@@ -584,10 +584,11 @@ open_chat = True
 pop1, pop2 = st.columns(2)
 with pop1:
     with st.popover("💰 예산 설정", use_container_width=True):
-        budget_food = st.number_input("식비 예산", min_value=0, step=10000, value=300000)
-        budget_transport = st.number_input("교통 예산", min_value=0, step=10000, value=100000)
-        budget_life = st.number_input("생활 예산", min_value=0, step=10000, value=150000)
-        budget_sub = st.number_input("구독 예산", min_value=0, step=10000, value=50000)
+        c1, c2 = st.columns(2)
+        budget_food = c1.number_input("식비", min_value=0, step=10000, value=300000)
+        budget_transport = c2.number_input("교통", min_value=0, step=10000, value=100000)
+        budget_life = c1.number_input("생활", min_value=0, step=10000, value=150000)
+        budget_sub = c2.number_input("구독", min_value=0, step=10000, value=50000)
         save_goal = st.number_input("월 저축 목표", min_value=0, step=50000, value=300000)
 with pop2:
     with st.popover("🔄 초기화", use_container_width=True):
