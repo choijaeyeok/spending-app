@@ -559,8 +559,11 @@ st.markdown("""
 .small-muted { font-size: 0.9rem; color: #6b7280; margin-top: -4px; }
 [data-testid="stToolbar"] { visibility: hidden !important; }
 [data-testid="stDecoration"] { display: none !important; }
+[data-testid="stHeader"] { display: none !important; }
 .stDeployButton { display: none !important; }
 footer { visibility: hidden !important; }
+header { visibility: hidden !important; }
+#MainMenu { visibility: hidden !important; }
 </style>
 """, unsafe_allow_html=True)
 
