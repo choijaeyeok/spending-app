@@ -581,17 +581,30 @@ st.markdown("""
 groq_key = os.environ.get("GROQ_API_KEY", "")
 open_chat = True
 
-pop1, pop2 = st.columns(2)
-with pop1:
-    with st.popover("💰 예산 설정", use_container_width=True):
+if "show_budget" not in st.session_state: st.session_state.show_budget = False
+if "show_reset" not in st.session_state: st.session_state.show_reset = False
+
+btn1, btn2 = st.columns(2)
+if btn1.button("💰 예산 설정", use_container_width=True):
+    st.session_state.show_budget = not st.session_state.show_budget
+    st.session_state.show_reset = False
+if btn2.button("🔄 초기화", use_container_width=True):
+    st.session_state.show_reset = not st.session_state.show_reset
+    st.session_state.show_budget = False
+
+if st.session_state.show_budget:
+    with st.container(border=True):
         c1, c2 = st.columns(2)
         budget_food = c1.number_input("식비", min_value=0, step=10000, value=300000)
         budget_transport = c2.number_input("교통", min_value=0, step=10000, value=100000)
         budget_life = c1.number_input("생활", min_value=0, step=10000, value=150000)
         budget_sub = c2.number_input("구독", min_value=0, step=10000, value=50000)
         save_goal = st.number_input("월 저축 목표", min_value=0, step=50000, value=300000)
-with pop2:
-    with st.popover("🔄 초기화", use_container_width=True):
+else:
+    budget_food, budget_transport, budget_life, budget_sub, save_goal = 300000, 100000, 150000, 50000, 300000
+
+if st.session_state.show_reset:
+    with st.container(border=True):
         if st.button("대화 초기화", use_container_width=True):
             st.session_state.chat_history = []
             st.success("채팅 기록을 초기화했어요.")
