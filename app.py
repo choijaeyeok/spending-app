@@ -558,10 +558,6 @@ st.markdown("""
 .section-card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
 .small-muted { font-size: 0.9rem; color: #6b7280; margin-top: -4px; }
 footer { visibility: hidden !important; }
-button[kind="secondary"] { display: none !important; }
-.stFloatingActionButton { display: none !important; }
-div[data-testid="stToolbar"] { display: none !important; }
-div[data-testid="stStatusWidget"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
