@@ -1,4 +1,7 @@
 streamlit
 pandas
+altair
+python-dotenv
+requests
+scikit-learn
 pillow
-pytesseract

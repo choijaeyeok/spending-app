@@ -1,0 +1,13 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+transactions.csv
+receipt_records.csv
+launcher.log
+model.pkl
+data.csv
+test.png
+test_ocr.py
+eval/images/
+스크린샷*.png
