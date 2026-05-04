@@ -673,26 +673,22 @@ elif "error" in params:
     st.query_params.clear()
 
 if st.session_state.user is None:
-    st.markdown("""
-    <div style="max-width:420px;margin:80px auto;text-align:center">
-        <h1>💸 자취생 소비 관리 AI</h1>
+    st.markdown(f"""
+    <div style="max-width:400px;margin:80px auto;text-align:center;padding:0 16px">
+        <h1 style="font-size:2rem">💸 자취생 소비 관리 AI</h1>
         <p style="color:#6b7280;margin-bottom:32px">
             구글 계정으로 로그인하면<br>어디서든 내 데이터를 유지할 수 있어요.
         </p>
-    </div>
-    """, unsafe_allow_html=True)
-    _, col, _ = st.columns([1, 1.2, 1])
-    with col:
-        st.markdown(f"""
         <a href="{google_auth_url()}" target="_self" style="
             display:flex;align-items:center;justify-content:center;gap:10px;
             background:#fff;color:#3c4043;border:1px solid #dadce0;
-            padding:12px 0;border-radius:10px;font-size:15px;
-            font-weight:500;text-decoration:none;">
+            padding:14px 0;border-radius:10px;font-size:15px;
+            font-weight:500;text-decoration:none;box-sizing:border-box;">
             <img src="https://www.google.com/favicon.ico" width="20">
             Google 계정으로 로그인
         </a>
-        """, unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
     st.stop()
 
 user_id: str = st.session_state.user["id"]
