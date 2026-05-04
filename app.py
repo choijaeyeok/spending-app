@@ -661,12 +661,13 @@ with tab1:
         daily["순변동"] = daily["수입금액"] - daily["지출금액"]
         daily["일자표시"] = pd.to_datetime(daily["일자"]).map(lambda d: f"{d.month}/{d.day}")
         st.write("### 일자별 요약")
-        st.dataframe(daily[["일자", "수입금액", "지출금액", "순변동"]], use_container_width=True)
-        daily_chart = (alt.Chart(daily[["일자표시", "지출금액"]]).mark_line(point=True).encode(
+        chart_data = daily[["일자표시", "수입금액", "지출금액"]].melt("일자표시", var_name="구분", value_name="금액")
+        daily_chart = (alt.Chart(chart_data).mark_bar().encode(
             x=alt.X("일자표시:N", sort=list(daily["일자표시"]), axis=alt.Axis(labelAngle=0, title="일자")),
-            y=alt.Y("지출금액:Q", title="지출 금액"),
-            tooltip=["일자표시:N", "지출금액:Q"],
-        ))
+            y=alt.Y("금액:Q", title="금액"),
+            color=alt.Color("구분:N", scale=alt.Scale(domain=["수입금액", "지출금액"], range=["#0ea5e9", "#f87171"])),
+            tooltip=["일자표시:N", "구분:N", "금액:Q"],
+        ).properties(height=250))
         st.altair_chart(daily_chart, use_container_width=True)
         tx_view = tx_df.sort_values("날짜", ascending=False).copy()
         tx_view["날짜"] = tx_view["날짜"].dt.strftime("%Y-%m-%d")
