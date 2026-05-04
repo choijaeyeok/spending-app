@@ -648,8 +648,6 @@ def local_finance_chatbot(user_input: str, total_income: int, total_expense: int
 
 st.set_page_config(page_title="자취생 소비 관리", page_icon="💸", layout="wide", menu_items={})
 
-st.write("🔑 DEBUG v5 — user:", st.session_state.get("user"))
-
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 
 if "user" not in st.session_state:
@@ -676,7 +674,6 @@ elif "error" in params:
 
 if st.session_state.user is None:
     _auth_url = google_auth_url()
-    st.write("DEBUG redirect_uri:", _secret("google", "redirect_uri"))
     st.markdown(f"""
     <div style="max-width:400px;margin:80px auto;text-align:center;padding:0 16px">
         <h1 style="font-size:2rem">💸 자취생 소비 관리 AI</h1>
