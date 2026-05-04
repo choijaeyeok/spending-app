@@ -559,6 +559,11 @@ st.markdown("""
 footer { visibility: hidden !important; }
 [data-testid="stSidebar"] { display: none !important; }
 [data-testid="collapsedControl"] { display: none !important; }
+html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
+    background-color: #ffffff !important;
+    color: #111111 !important;
+    color-scheme: light !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
