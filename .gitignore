@@ -11,3 +11,5 @@ test.png
 test_ocr.py
 eval/images/
 스크린샷*.png
+.streamlit/secrets.toml
+자취생AI/.streamlit/secrets.toml

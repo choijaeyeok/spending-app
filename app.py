@@ -1,4 +1,5 @@
 import os
+import urllib.parse
 from dotenv import load_dotenv
 load_dotenv()
 import streamlit as st
@@ -6,6 +7,7 @@ import pandas as pd
 import altair as alt
 import requests as req
 import base64
+from supabase import create_client
 from typing import List, Tuple
 import re
 import pickle
@@ -13,12 +15,107 @@ import random
 from datetime import date
 from pathlib import Path
 
-# Streamlit Cloud secrets를 환경변수로 로드 (클라우드 배포 시 .env 대신 사용)
-try:
-    for _k, _v in st.secrets.items():
-        os.environ.setdefault(_k, str(_v))
-except Exception:
-    pass
+def _secret(section: str, key: str) -> str:
+    """st.secrets 우선, 없으면 환경변수(SECTION_KEY) 사용 — Render 배포 지원."""
+    try:
+        return st.secrets[section][key]
+    except Exception:
+        env_key = f"{section.upper()}_{key.upper()}"
+        val = os.environ.get(env_key)
+        if val is None:
+            raise RuntimeError(f"Missing secret: [{section}] {key}  (env: {env_key})")
+        return val
+
+# ─── Supabase client ──────────────────────────────────────────────────────────
+
+@st.cache_resource
+def get_supabase():
+    return create_client(
+        _secret("supabase", "url"),
+        _secret("supabase", "service_key"),
+    )
+
+# ─── Google OAuth ─────────────────────────────────────────────────────────────
+
+def google_auth_url() -> str:
+    params = {
+        "client_id": _secret("google", "client_id"),
+        "redirect_uri": _secret("google", "redirect_uri"),
+        "response_type": "code",
+        "scope": "openid email profile",
+        "access_type": "offline",
+        "prompt": "select_account",
+    }
+    return f"https://accounts.google.com/o/oauth2/v2/auth?{urllib.parse.urlencode(params)}"
+
+def google_exchange_code(code: str) -> str:
+    resp = req.post(
+        "https://oauth2.googleapis.com/token",
+        data={
+            "code": code,
+            "client_id": _secret("google", "client_id"),
+            "client_secret": _secret("google", "client_secret"),
+            "redirect_uri": _secret("google", "redirect_uri"),
+            "grant_type": "authorization_code",
+        },
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return resp.json()["access_token"]
+
+def google_get_user(token: str) -> dict:
+    resp = req.get(
+        "https://www.googleapis.com/oauth2/v2/userinfo",
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=10,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return {"id": data["id"], "name": data.get("name", "사용자"), "email": data.get("email", "")}
+
+# ─── Supabase data helpers ────────────────────────────────────────────────────
+
+TX_COLS = ["날짜", "구분", "카테고리", "금액", "메모"]
+RC_COLS = ["메뉴", "추정금액", "카테고리", "OCR원문"]
+
+def load_transactions(user_id: str) -> pd.DataFrame:
+    resp = get_supabase().table("transactions").select("tx_date,tx_type,category,amount,memo").eq("user_id", user_id).execute()
+    if not resp.data:
+        return pd.DataFrame(columns=TX_COLS)
+    rename = {"tx_date": "날짜", "tx_type": "구분", "category": "카테고리", "amount": "금액", "memo": "메모"}
+    return pd.DataFrame(resp.data).rename(columns=rename)[TX_COLS]
+
+def add_transaction(user_id: str, row: dict):
+    get_supabase().table("transactions").insert({
+        "user_id": user_id,
+        "tx_date": str(row["날짜"])[:10],
+        "tx_type": row["구분"],
+        "category": row["카테고리"],
+        "amount": int(row["금액"]),
+        "memo": row["메모"],
+    }).execute()
+
+def clear_transactions(user_id: str):
+    get_supabase().table("transactions").delete().eq("user_id", user_id).execute()
+
+def load_receipts(user_id: str) -> pd.DataFrame:
+    resp = get_supabase().table("receipt_records").select("merchant,estimated_amount,category,ocr_text").eq("user_id", user_id).execute()
+    if not resp.data:
+        return pd.DataFrame(columns=RC_COLS)
+    rename = {"merchant": "메뉴", "estimated_amount": "추정금액", "category": "카테고리", "ocr_text": "OCR원문"}
+    return pd.DataFrame(resp.data).rename(columns=rename)[RC_COLS]
+
+def add_receipt(user_id: str, row: dict):
+    get_supabase().table("receipt_records").insert({
+        "user_id": user_id,
+        "merchant": row["메뉴"],
+        "estimated_amount": int(row["추정금액"]),
+        "category": row["카테고리"],
+        "ocr_text": row["OCR원문"][:4000],
+    }).execute()
+
+def clear_receipts(user_id: str):
+    get_supabase().table("receipt_records").delete().eq("user_id", user_id).execute()
 
 def normalize_ocr_text(text: str) -> str:
     lines = [line.strip() for line in text.splitlines() if line.strip()]
@@ -550,6 +647,64 @@ def local_finance_chatbot(user_input: str, total_income: int, total_expense: int
     return random.choice(RESPONSES.get(category, ["소비 관련 질문을 해주세요."]))
 
 st.set_page_config(page_title="자취생 소비 관리", page_icon="💸", layout="wide", menu_items={})
+
+# ─── Auth ─────────────────────────────────────────────────────────────────────
+
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+params = st.query_params
+
+if "code" in params and st.session_state.user is None:
+    with st.spinner("로그인 중..."):
+        try:
+            token = google_exchange_code(params["code"])
+            user = google_get_user(token)
+            st.session_state.user = user
+            st.session_state.transaction_records = load_transactions(user["id"])
+            st.session_state.receipt_records = load_receipts(user["id"])
+            st.query_params.clear()
+            st.rerun()
+        except Exception as e:
+            st.error(f"로그인 실패: {e}")
+            st.query_params.clear()
+elif "error" in params:
+    st.warning("구글 로그인이 취소됐어요.")
+    st.query_params.clear()
+
+if st.session_state.user is None:
+    st.markdown("""
+    <div style="max-width:420px;margin:80px auto;text-align:center">
+        <h1>💸 자취생 소비 관리 AI</h1>
+        <p style="color:#6b7280;margin-bottom:32px">
+            구글 계정으로 로그인하면<br>어디서든 내 데이터를 유지할 수 있어요.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    _, col, _ = st.columns([1, 1.2, 1])
+    with col:
+        st.markdown(f"""
+        <a href="{google_auth_url()}" target="_self" style="
+            display:flex;align-items:center;justify-content:center;gap:10px;
+            background:#fff;color:#3c4043;border:1px solid #dadce0;
+            padding:12px 0;border-radius:10px;font-size:15px;
+            font-weight:500;text-decoration:none;">
+            <img src="https://www.google.com/favicon.ico" width="20">
+            Google 계정으로 로그인
+        </a>
+        """, unsafe_allow_html=True)
+    st.stop()
+
+user_id: str = st.session_state.user["id"]
+user_name: str = st.session_state.user["name"]
+
+if "transaction_records" not in st.session_state:
+    st.session_state.transaction_records = load_transactions(user_id)
+if "receipt_records" not in st.session_state:
+    st.session_state.receipt_records = load_receipts(user_id)
+
+# ─────────────────────────────────────────────────────────────────────────────
+
 st.markdown("""
 <style>
 .block-container { padding-top: 2rem; padding-bottom: 2rem; max-width: 1180px; }
@@ -618,13 +773,18 @@ if st.session_state.show_reset:
             st.session_state.chat_history = []
             st.success("채팅 기록을 초기화했어요.")
         if st.button("입출금 내역 초기화", use_container_width=True):
-            st.session_state.transaction_records = pd.DataFrame(columns=["날짜", "구분", "카테고리", "금액", "메모"])
-            save_records()
+            clear_transactions(user_id)
+            st.session_state.transaction_records = pd.DataFrame(columns=TX_COLS)
             st.success("입출금 내역을 초기화했어요.")
         if st.button("영수증 기록 초기화", use_container_width=True):
-            st.session_state.receipt_records = pd.DataFrame(columns=["메뉴", "추정금액", "카테고리", "OCR원문"])
-            save_records()
+            clear_receipts(user_id)
+            st.session_state.receipt_records = pd.DataFrame(columns=RC_COLS)
             st.success("영수증 기록을 초기화했어요.")
+        st.markdown("---")
+        if st.button("로그아웃", use_container_width=True):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
 
 transactions = st.session_state.transaction_records.copy()
 total_income = int(transactions[transactions["구분"] == "수입"]["금액"].sum())
@@ -644,11 +804,9 @@ with tab1:
         if tx_amount <= 0:
             st.warning("금액은 1원 이상 입력해주세요.")
         else:
-            new_tx = pd.DataFrame([{
-                "날짜": pd.to_datetime(tx_date), "구분": tx_type, "카테고리": tx_category, "금액": int(tx_amount), "메모": tx_memo.strip()
-            }])
-            st.session_state.transaction_records = pd.concat([st.session_state.transaction_records, new_tx], ignore_index=True)
-            save_records()
+            new_row = {"날짜": pd.to_datetime(tx_date), "구분": tx_type, "카테고리": tx_category, "금액": int(tx_amount), "메모": tx_memo.strip()}
+            add_transaction(user_id, new_row)
+            st.session_state.transaction_records = pd.concat([st.session_state.transaction_records, pd.DataFrame([new_row])], ignore_index=True)
             st.rerun()
     tx_df = st.session_state.transaction_records.copy()
     if not tx_df.empty:
@@ -661,12 +819,10 @@ with tab1:
         daily["순변동"] = daily["수입금액"] - daily["지출금액"]
         daily["일자표시"] = pd.to_datetime(daily["일자"]).map(lambda d: f"{d.month}/{d.day}")
         st.write("### 일자별 요약")
-        chart_data = daily[["일자표시", "수입금액", "지출금액"]].melt("일자표시", var_name="구분", value_name="금액")
-        daily_chart = (alt.Chart(chart_data).mark_bar().encode(
+        daily_chart = (alt.Chart(daily[["일자표시", "지출금액"]]).mark_bar(color="#0ea5e9").encode(
             x=alt.X("일자표시:N", sort=list(daily["일자표시"]), axis=alt.Axis(labelAngle=0, title="일자")),
-            y=alt.Y("금액:Q", title="금액"),
-            color=alt.Color("구분:N", scale=alt.Scale(domain=["수입금액", "지출금액"], range=["#0ea5e9", "#f87171"])),
-            tooltip=["일자표시:N", "구분:N", "금액:Q"],
+            y=alt.Y("지출금액:Q", title="지출 금액"),
+            tooltip=["일자표시:N", "지출금액:Q"],
         ).properties(height=250))
         st.altair_chart(daily_chart, use_container_width=True)
         tx_view = tx_df.sort_values("날짜", ascending=False).copy()
@@ -761,10 +917,9 @@ with tab4:
                 try:
                     ocr_text = extract_receipt_text(receipt_file)
                     merchant, total_amount, category = parse_receipt_info(ocr_text)
-                    new_row = pd.DataFrame([{
-                        "메뉴": merchant, "추정금액": total_amount, "카테고리": category, "OCR원문": ocr_text[:4000]
-                    }])
-                    st.session_state.receipt_records = pd.concat([st.session_state.receipt_records, new_row], ignore_index=True)
+                    new_rc = {"메뉴": merchant, "추정금액": total_amount, "카테고리": category, "OCR원문": ocr_text[:4000]}
+                    add_receipt(user_id, new_rc)
+                    st.session_state.receipt_records = pd.concat([st.session_state.receipt_records, pd.DataFrame([new_rc])], ignore_index=True)
                     results.append({"파일": receipt_file.name, "메뉴": merchant, "추정금액": f"{total_amount:,}원", "카테고리": category})
                 except Exception as e:
                     results.append({"파일": receipt_file.name, "메뉴": "오류", "추정금액": "-", "카테고리": str(e)})
@@ -782,13 +937,10 @@ with tab4:
                     amount = int(r["추정금액"].replace(",", "").replace("원", ""))
                 except ValueError:
                     continue
-                new_tx = pd.DataFrame([{
-                    "날짜": pd.to_datetime(date.today()), "구분": "지출",
-                    "카테고리": r["카테고리"], "금액": amount, "메모": r["메뉴"]
-                }])
-                st.session_state.transaction_records = pd.concat([st.session_state.transaction_records, new_tx], ignore_index=True)
+                new_row = {"날짜": pd.to_datetime(date.today()), "구분": "지출", "카테고리": r["카테고리"], "금액": amount, "메모": r["메뉴"]}
+                add_transaction(user_id, new_row)
+                st.session_state.transaction_records = pd.concat([st.session_state.transaction_records, pd.DataFrame([new_row])], ignore_index=True)
                 added += 1
-            save_records()
             st.session_state.ocr_results = []
             st.success(f"{added}건을 지출 내역에 추가했어요.")
             st.rerun()
