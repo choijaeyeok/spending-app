@@ -675,13 +675,15 @@ elif "error" in params:
     st.query_params.clear()
 
 if st.session_state.user is None:
+    _auth_url = google_auth_url()
+    st.write("DEBUG redirect_uri:", _secret("google", "redirect_uri"))
     st.markdown(f"""
     <div style="max-width:400px;margin:80px auto;text-align:center;padding:0 16px">
         <h1 style="font-size:2rem">💸 자취생 소비 관리 AI</h1>
         <p style="color:#6b7280;margin-bottom:32px">
             구글 계정으로 로그인하면<br>어디서든 내 데이터를 유지할 수 있어요.
         </p>
-        <a href="{google_auth_url()}" target="_self" style="
+        <a href="{_auth_url}" target="_self" style="
             display:flex;align-items:center;justify-content:center;gap:10px;
             background:#fff;color:#3c4043;border:1px solid #dadce0;
             padding:14px 0;border-radius:10px;font-size:15px;
