@@ -648,7 +648,17 @@ def local_finance_chatbot(user_input: str, total_income: int, total_expense: int
 
 st.set_page_config(page_title="자취생 소비 관리", page_icon="💸", layout="wide", menu_items={})
 
-st.markdown('<meta name="google" content="notranslate"><meta http-equiv="Content-Language" content="ko">', unsafe_allow_html=True)
+st.markdown("""
+<script>
+(function(){
+    document.documentElement.setAttribute('translate','no');
+    document.documentElement.setAttribute('lang','ko');
+    var m=document.createElement('meta');
+    m.name='google'; m.content='notranslate';
+    document.head.appendChild(m);
+})();
+</script>
+""", unsafe_allow_html=True)
 
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 
