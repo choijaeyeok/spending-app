@@ -711,10 +711,21 @@ st.markdown("""
 footer { visibility: hidden !important; }
 [data-testid="stSidebar"] { display: none !important; }
 [data-testid="collapsedControl"] { display: none !important; }
+:root { color-scheme: light !important; }
 html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
     background-color: #ffffff !important;
     color: #111111 !important;
     color-scheme: light !important;
+}
+[data-testid="stButton"] > button {
+    background-color: #ffffff !important;
+    color: #111111 !important;
+    border-color: #e5e7eb !important;
+}
+[data-testid="stSelectbox"] *, [data-testid="stTextInput"] *,
+[data-testid="stNumberInput"] *, [data-testid="stDateInput"] * {
+    background-color: #ffffff !important;
+    color: #111111 !important;
 }
 </style>
 """, unsafe_allow_html=True)
