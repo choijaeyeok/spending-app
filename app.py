@@ -727,6 +727,16 @@ html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
     background-color: #ffffff !important;
     color: #111111 !important;
 }
+button[data-baseweb="tab"] {
+    color: #111111 !important;
+    background-color: transparent !important;
+}
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: #e53935 !important;
+}
+[data-testid="stTabs"] * {
+    color: #111111 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
