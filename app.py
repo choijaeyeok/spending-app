@@ -648,6 +648,8 @@ def local_finance_chatbot(user_input: str, total_income: int, total_expense: int
 
 st.set_page_config(page_title="자취생 소비 관리", page_icon="💸", layout="wide", menu_items={})
 
+st.markdown('<meta name="google" content="notranslate"><meta http-equiv="Content-Language" content="ko">', unsafe_allow_html=True)
+
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 
 if "user" not in st.session_state:
