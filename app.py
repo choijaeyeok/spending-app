@@ -734,6 +734,8 @@ st.markdown("""
 .m-tbl { border-collapse: collapse; font-size: .9em; min-width: 360px; width: 100%; }
 .m-tbl th { background: #f8fafc; padding: 7px 12px; border-bottom: 2px solid #e2e8f0; white-space: nowrap; text-align: left; font-weight: 600; }
 .m-tbl td { padding: 6px 12px; border-bottom: 1px solid #f1f5f9; }
+.row-wrap [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; align-items: center !important; }
+.row-wrap [data-testid="stHorizontalBlock"] [data-testid="stButton"] button { padding: 2px 8px !important; min-height: 0 !important; font-size: 0.8em !important; }
 footer { visibility: hidden !important; }
 [data-testid="stSidebar"] { display: none !important; }
 [data-testid="collapsedControl"] { display: none !important; }
@@ -874,19 +876,17 @@ with tab1:
         tx_view = tx_view.sort_values("날짜", ascending=False)
         tx_view["날짜"] = tx_view["날짜"].dt.strftime("%Y-%m-%d")
         st.write("### 거래 내역")
-        tx_display = tx_view[["날짜", "구분", "카테고리", "금액", "메모"]].copy()
-        tx_display["금액"] = tx_display["금액"].apply(lambda x: f"{int(x):,}원")
-        html = tx_display.to_html(index=False, border=0, escape=True, classes="m-tbl")
-        st.markdown(f'<div class="m-tbl-wrap">{html}</div>', unsafe_allow_html=True)
-        valid_tx = tx_view[tx_view["_id"].notna()].reset_index(drop=True)
-        if not valid_tx.empty:
-            labels = [f"{r['날짜']} · {r['구분']} · {int(r['금액']):,}원" for _, r in valid_tx.iterrows()]
-            sel = st.selectbox("삭제할 항목 선택", labels, key="del_tx_sel", label_visibility="collapsed")
-            if st.button("🗑️ 선택 항목 삭제", key="del_tx_btn"):
-                rid = int(valid_tx.iloc[labels.index(sel)]["_id"])
-                delete_transaction(rid)
+        st.markdown('<div class="row-wrap">', unsafe_allow_html=True)
+        for _, row in tx_view.iterrows():
+            c1, c2 = st.columns([10, 1])
+            with c1:
+                memo_part = f" · {row['메모']}" if str(row.get("메모", "")).strip() else ""
+                st.markdown(f"{row['날짜']} · {row['구분']} · {row['카테고리']} · **{int(row['금액']):,}원**{memo_part}")
+            if c2.button("✕", key=f"del_tx_{row['_id']}"):
+                delete_transaction(int(row["_id"]))
                 st.session_state.transaction_records = load_transactions(user_id)
                 st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
         st.write("### 반복지출 감지")
         expense_df = tx_df[tx_df["구분"] == "지출"].copy()
         one_week_ago = pd.Timestamp.today() - pd.Timedelta(days=7)
@@ -1004,17 +1004,14 @@ with tab4:
             st.rerun()
     if not st.session_state.receipt_records.empty:
         st.write("### 영수증 분석 기록")
-        rc_display = st.session_state.receipt_records[["메뉴", "추정금액", "카테고리"]].copy()
-        rc_display["추정금액"] = rc_display["추정금액"].apply(lambda x: f"{int(x):,}원")
-        html_rc = rc_display.to_html(index=False, border=0, escape=True, classes="m-tbl")
-        st.markdown(f'<div class="m-tbl-wrap">{html_rc}</div>', unsafe_allow_html=True)
-        valid_rc = st.session_state.receipt_records[st.session_state.receipt_records["_id"].notna()].reset_index(drop=True)
-        if not valid_rc.empty:
-            labels_rc = [f"{r['메뉴']} · {int(r['추정금액']):,}원" for _, r in valid_rc.iterrows()]
-            sel_rc = st.selectbox("삭제할 영수증 선택", labels_rc, key="del_rc_sel", label_visibility="collapsed")
-            if st.button("🗑️ 선택 영수증 삭제", key="del_rc_btn"):
-                rid = int(valid_rc.iloc[labels_rc.index(sel_rc)]["_id"])
-                delete_receipt(rid)
+        st.markdown('<div class="row-wrap">', unsafe_allow_html=True)
+        for _, row in st.session_state.receipt_records.iterrows():
+            c1, c2 = st.columns([10, 1])
+            with c1:
+                st.markdown(f"{row['메뉴']} · **{int(row['추정금액']):,}원** · {row['카테고리']}")
+            if c2.button("✕", key=f"del_rc_{row['_id']}"):
+                delete_receipt(int(row["_id"]))
                 st.session_state.receipt_records = load_receipts(user_id)
                 st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
