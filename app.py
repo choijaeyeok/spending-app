@@ -994,11 +994,18 @@ with tab4:
             st.success(f"{len(receipt_files)}개 분석 완료!")
     if st.session_state.ocr_results:
         st.table(pd.DataFrame(st.session_state.ocr_results))
-        _c1, _c2 = st.columns(2)
-        if _c2.button("결과 지우기", use_container_width=True):
-            st.session_state.ocr_results = []
-            st.rerun()
-        if _c1.button("지출 내역에 추가", use_container_width=True):
+        # 항목별 삭제
+        valid_ocr = [r for r in st.session_state.ocr_results if r["메뉴"] != "오류"]
+        if valid_ocr:
+            ocr_labels = [f"{r['메뉴']} · {r['추정금액']}" for r in valid_ocr]
+            sel_ocr = st.selectbox("삭제할 항목", ocr_labels, key="del_ocr_sel", label_visibility="collapsed")
+            if st.button("🗑️ 삭제", key="del_ocr_btn", use_container_width=True):
+                idx = ocr_labels.index(sel_ocr)
+                st.session_state.ocr_results.pop(
+                    st.session_state.ocr_results.index(valid_ocr[idx])
+                )
+                st.rerun()
+        if st.button("지출 내역에 추가", use_container_width=True):
             added = 0
             for r in st.session_state.ocr_results:
                 if r["메뉴"] == "오류":
@@ -1014,24 +1021,4 @@ with tab4:
             st.session_state.ocr_results = []
             st.success(f"{added}건을 지출 내역에 추가했어요.")
             st.rerun()
-    if not st.session_state.receipt_records.empty:
-        st.write("### 영수증 분석 기록")
-        rc = st.session_state.receipt_records
-        rc_disp = rc[["메뉴", "추정금액", "카테고리"]].copy()
-        rc_disp["추정금액"] = rc_disp["추정금액"].apply(lambda x: f"{int(x):,}원")
-        st.markdown(
-            '<div class="m-tbl-wrap">'
-            + rc_disp.to_html(index=False, border=0, escape=True, classes="m-tbl")
-            + "</div>",
-            unsafe_allow_html=True,
-        )
-        valid_rc = rc[rc["_id"].notna()].reset_index(drop=True)
-        if not valid_rc.empty:
-            labels_rc = [f"{r['메뉴']} · {int(r['추정금액']):,}원" for _, r in valid_rc.iterrows()]
-            sel_rc = st.selectbox("삭제할 영수증", labels_rc, key="del_rc_sel", label_visibility="collapsed")
-            if st.button("🗑️ 삭제", key="del_rc_btn", use_container_width=True):
-                rid = int(valid_rc.iloc[labels_rc.index(sel_rc)]["_id"])
-                delete_receipt(rid)
-                st.session_state.receipt_records = load_receipts(user_id)
-                st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
