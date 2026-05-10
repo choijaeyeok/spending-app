@@ -875,25 +875,26 @@ with tab1:
         tx_view = tx_view.sort_values("날짜", ascending=False)
         tx_view["날짜"] = tx_view["날짜"].dt.strftime("%Y-%m-%d")
         st.write("### 거래 내역")
-        valid_ids = tx_view["_id"].fillna(-1).astype(int).tolist()
-        edit_df = tx_view[TX_COLS].copy()
-        edit_df.index = valid_ids
-        edited = st.data_editor(
-            edit_df,
-            use_container_width=True,
-            num_rows="dynamic",
-            disabled=TX_COLS,
-            hide_index=True,
-            column_config={"금액": st.column_config.NumberColumn(format="%d원")},
-            key="tx_editor_main",
+        tx_disp = tx_view[TX_COLS].copy()
+        tx_disp["금액"] = tx_disp["금액"].apply(lambda x: f"{int(x):,}원")
+        st.markdown(
+            '<div class="m-tbl-wrap">'
+            + tx_disp.to_html(index=False, border=0, escape=True, classes="m-tbl")
+            + "</div>",
+            unsafe_allow_html=True,
         )
-        remaining = set(edited.index) & {i for i in valid_ids if i != -1}
-        deleted = {i for i in valid_ids if i != -1} - remaining
-        if deleted:
-            for rid in deleted:
+        valid_tx = tx_view[tx_view["_id"].notna()].reset_index(drop=True)
+        if not valid_tx.empty:
+            labels = [
+                f"{r['날짜']} · {r['구분']} · {r['카테고리']} · {int(r['금액']):,}원"
+                for _, r in valid_tx.iterrows()
+            ]
+            sel = st.selectbox("삭제할 항목", labels, key="del_tx_sel", label_visibility="collapsed")
+            if st.button("🗑️ 삭제", key="del_tx_btn", use_container_width=True):
+                rid = int(valid_tx.iloc[labels.index(sel)]["_id"])
                 delete_transaction(rid)
-            st.session_state.transaction_records = load_transactions(user_id)
-            st.rerun()
+                st.session_state.transaction_records = load_transactions(user_id)
+                st.rerun()
         st.write("### 반복지출 감지")
         expense_df = tx_df[tx_df["구분"] == "지출"].copy()
         one_week_ago = pd.Timestamp.today() - pd.Timedelta(days=7)
@@ -1012,23 +1013,21 @@ with tab4:
     if not st.session_state.receipt_records.empty:
         st.write("### 영수증 분석 기록")
         rc = st.session_state.receipt_records
-        rc_ids = rc["_id"].fillna(-1).astype(int).tolist()
-        rc_edit_df = rc[["메뉴", "추정금액", "카테고리"]].copy()
-        rc_edit_df.index = rc_ids
-        rc_edited = st.data_editor(
-            rc_edit_df,
-            use_container_width=True,
-            num_rows="dynamic",
-            disabled=["메뉴", "추정금액", "카테고리"],
-            hide_index=True,
-            column_config={"추정금액": st.column_config.NumberColumn(format="%d원")},
-            key="rc_editor_main",
+        rc_disp = rc[["메뉴", "추정금액", "카테고리"]].copy()
+        rc_disp["추정금액"] = rc_disp["추정금액"].apply(lambda x: f"{int(x):,}원")
+        st.markdown(
+            '<div class="m-tbl-wrap">'
+            + rc_disp.to_html(index=False, border=0, escape=True, classes="m-tbl")
+            + "</div>",
+            unsafe_allow_html=True,
         )
-        rc_remaining = set(rc_edited.index) & {i for i in rc_ids if i != -1}
-        rc_deleted = {i for i in rc_ids if i != -1} - rc_remaining
-        if rc_deleted:
-            for rid in rc_deleted:
+        valid_rc = rc[rc["_id"].notna()].reset_index(drop=True)
+        if not valid_rc.empty:
+            labels_rc = [f"{r['메뉴']} · {int(r['추정금액']):,}원" for _, r in valid_rc.iterrows()]
+            sel_rc = st.selectbox("삭제할 영수증", labels_rc, key="del_rc_sel", label_visibility="collapsed")
+            if st.button("🗑️ 삭제", key="del_rc_btn", use_container_width=True):
+                rid = int(valid_rc.iloc[labels_rc.index(sel_rc)]["_id"])
                 delete_receipt(rid)
-            st.session_state.receipt_records = load_receipts(user_id)
-            st.rerun()
+                st.session_state.receipt_records = load_receipts(user_id)
+                st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
