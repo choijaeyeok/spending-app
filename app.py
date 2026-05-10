@@ -79,11 +79,16 @@ TX_COLS = ["날짜", "구분", "카테고리", "금액", "메모"]
 RC_COLS = ["메뉴", "추정금액", "카테고리", "OCR원문"]
 
 def load_transactions(user_id: str) -> pd.DataFrame:
-    resp = get_supabase().table("transactions").select("tx_date,tx_type,category,amount,memo").eq("user_id", user_id).execute()
+    resp = get_supabase().table("transactions").select("id,tx_date,tx_type,category,amount,memo").eq("user_id", user_id).execute()
     if not resp.data:
-        return pd.DataFrame(columns=TX_COLS)
+        return pd.DataFrame(columns=["_id"] + TX_COLS)
     rename = {"tx_date": "날짜", "tx_type": "구분", "category": "카테고리", "amount": "금액", "memo": "메모"}
-    return pd.DataFrame(resp.data).rename(columns=rename)[TX_COLS]
+    df = pd.DataFrame(resp.data).rename(columns=rename)
+    df["_id"] = df["id"]
+    return df[["_id"] + TX_COLS]
+
+def delete_transaction(record_id):
+    get_supabase().table("transactions").delete().eq("id", record_id).execute()
 
 def add_transaction(user_id: str, row: dict):
     get_supabase().table("transactions").insert({
@@ -99,11 +104,16 @@ def clear_transactions(user_id: str):
     get_supabase().table("transactions").delete().eq("user_id", user_id).execute()
 
 def load_receipts(user_id: str) -> pd.DataFrame:
-    resp = get_supabase().table("receipt_records").select("merchant,estimated_amount,category,ocr_text").eq("user_id", user_id).execute()
+    resp = get_supabase().table("receipt_records").select("id,merchant,estimated_amount,category,ocr_text").eq("user_id", user_id).execute()
     if not resp.data:
-        return pd.DataFrame(columns=RC_COLS)
+        return pd.DataFrame(columns=["_id"] + RC_COLS)
     rename = {"merchant": "메뉴", "estimated_amount": "추정금액", "category": "카테고리", "ocr_text": "OCR원문"}
-    return pd.DataFrame(resp.data).rename(columns=rename)[RC_COLS]
+    df = pd.DataFrame(resp.data).rename(columns=rename)
+    df["_id"] = df["id"]
+    return df[["_id"] + RC_COLS]
+
+def delete_receipt(record_id):
+    get_supabase().table("receipt_records").delete().eq("id", record_id).execute()
 
 def add_receipt(user_id: str, row: dict):
     get_supabase().table("receipt_records").insert({
@@ -855,10 +865,25 @@ with tab1:
             tooltip=["일자표시:N", "지출금액:Q"],
         ).properties(height=250))
         st.altair_chart(daily_chart, use_container_width=True)
-        tx_view = tx_df.sort_values("날짜", ascending=False).copy()
+        tx_view = st.session_state.transaction_records.copy()
+        tx_view["날짜"] = pd.to_datetime(tx_view["날짜"])
+        tx_view = tx_view.sort_values("날짜", ascending=False)
         tx_view["날짜"] = tx_view["날짜"].dt.strftime("%Y-%m-%d")
         st.write("### 거래 내역")
-        st.dataframe(tx_view, use_container_width=True)
+        hdr = st.columns([2, 1, 2, 2, 2, 0.5])
+        for col, name in zip(hdr, ["날짜", "구분", "카테고리", "금액", "메모", ""]):
+            col.markdown(f"**{name}**")
+        for _, row in tx_view.iterrows():
+            c1, c2, c3, c4, c5, c6 = st.columns([2, 1, 2, 2, 2, 0.5])
+            c1.write(row["날짜"])
+            c2.write(row["구분"])
+            c3.write(row["카테고리"])
+            c4.write(f"{int(row['금액']):,}원")
+            c5.write(row["메모"])
+            if c6.button("✕", key=f"del_tx_{row['_id']}"):
+                delete_transaction(row["_id"])
+                st.session_state.transaction_records = load_transactions(user_id)
+                st.rerun()
         st.write("### 반복지출 감지")
         expense_df = tx_df[tx_df["구분"] == "지출"].copy()
         one_week_ago = pd.Timestamp.today() - pd.Timedelta(days=7)
@@ -976,5 +1001,16 @@ with tab4:
             st.rerun()
     if not st.session_state.receipt_records.empty:
         st.write("### 영수증 분석 기록")
-        st.dataframe(st.session_state.receipt_records[["메뉴", "추정금액", "카테고리"]], use_container_width=True)
+        hdr = st.columns([3, 2, 2, 0.5])
+        for col, name in zip(hdr, ["메뉴", "추정금액", "카테고리", ""]):
+            col.markdown(f"**{name}**")
+        for _, row in st.session_state.receipt_records.iterrows():
+            c1, c2, c3, c4 = st.columns([3, 2, 2, 0.5])
+            c1.write(row["메뉴"])
+            c2.write(f"{int(row['추정금액']):,}원")
+            c3.write(row["카테고리"])
+            if c4.button("✕", key=f"del_rc_{row['_id']}"):
+                delete_receipt(row["_id"])
+                st.session_state.receipt_records = load_receipts(user_id)
+                st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
