@@ -734,8 +734,7 @@ st.markdown("""
 .m-tbl { border-collapse: collapse; font-size: .9em; min-width: 360px; width: 100%; }
 .m-tbl th { background: #f8fafc; padding: 7px 12px; border-bottom: 2px solid #e2e8f0; white-space: nowrap; text-align: left; font-weight: 600; }
 .m-tbl td { padding: 6px 12px; border-bottom: 1px solid #f1f5f9; }
-.row-wrap [data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; align-items: center !important; }
-.row-wrap [data-testid="stHorizontalBlock"] [data-testid="stButton"] button { padding: 2px 8px !important; min-height: 0 !important; font-size: 0.8em !important; }
+[data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; align-items: center !important; }
 footer { visibility: hidden !important; }
 [data-testid="stSidebar"] { display: none !important; }
 [data-testid="collapsedControl"] { display: none !important; }
@@ -876,7 +875,6 @@ with tab1:
         tx_view = tx_view.sort_values("날짜", ascending=False)
         tx_view["날짜"] = tx_view["날짜"].dt.strftime("%Y-%m-%d")
         st.write("### 거래 내역")
-        st.markdown('<div class="row-wrap">', unsafe_allow_html=True)
         for _, row in tx_view.iterrows():
             c1, c2 = st.columns([10, 1])
             with c1:
@@ -886,7 +884,6 @@ with tab1:
                 delete_transaction(int(row["_id"]))
                 st.session_state.transaction_records = load_transactions(user_id)
                 st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
         st.write("### 반복지출 감지")
         expense_df = tx_df[tx_df["구분"] == "지출"].copy()
         one_week_ago = pd.Timestamp.today() - pd.Timedelta(days=7)
@@ -1004,7 +1001,6 @@ with tab4:
             st.rerun()
     if not st.session_state.receipt_records.empty:
         st.write("### 영수증 분석 기록")
-        st.markdown('<div class="row-wrap">', unsafe_allow_html=True)
         for _, row in st.session_state.receipt_records.iterrows():
             c1, c2 = st.columns([10, 1])
             with c1:
@@ -1013,5 +1009,4 @@ with tab4:
                 delete_receipt(int(row["_id"]))
                 st.session_state.receipt_records = load_receipts(user_id)
                 st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
