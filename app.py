@@ -846,7 +846,7 @@ with tab1:
         else:
             new_row = {"날짜": pd.to_datetime(tx_date), "구분": tx_type, "카테고리": tx_category, "금액": int(tx_amount), "메모": tx_memo.strip()}
             add_transaction(user_id, new_row)
-            st.session_state.transaction_records = pd.concat([st.session_state.transaction_records, pd.DataFrame([new_row])], ignore_index=True)
+            st.session_state.transaction_records = load_transactions(user_id)
             st.rerun()
     tx_df = st.session_state.transaction_records.copy()
     if not tx_df.empty:
@@ -970,7 +970,7 @@ with tab4:
                     merchant, total_amount, category = parse_receipt_info(ocr_text)
                     new_rc = {"메뉴": merchant, "추정금액": total_amount, "카테고리": category, "OCR원문": ocr_text[:4000]}
                     add_receipt(user_id, new_rc)
-                    st.session_state.receipt_records = pd.concat([st.session_state.receipt_records, pd.DataFrame([new_rc])], ignore_index=True)
+                    st.session_state.receipt_records = load_receipts(user_id)
                     results.append({"파일": receipt_file.name, "메뉴": merchant, "추정금액": f"{total_amount:,}원", "카테고리": category})
                 except Exception as e:
                     results.append({"파일": receipt_file.name, "메뉴": "오류", "추정금액": "-", "카테고리": str(e)})
@@ -990,8 +990,8 @@ with tab4:
                     continue
                 new_row = {"날짜": pd.to_datetime(date.today()), "구분": "지출", "카테고리": r["카테고리"], "금액": amount, "메모": r["메뉴"]}
                 add_transaction(user_id, new_row)
-                st.session_state.transaction_records = pd.concat([st.session_state.transaction_records, pd.DataFrame([new_row])], ignore_index=True)
                 added += 1
+            st.session_state.transaction_records = load_transactions(user_id)
             st.session_state.ocr_results = []
             st.success(f"{added}건을 지출 내역에 추가했어요.")
             st.rerun()
