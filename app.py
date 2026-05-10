@@ -775,6 +775,7 @@ if "transaction_records" not in st.session_state:
     st.session_state.transaction_records = pd.DataFrame(columns=["날짜", "구분", "카테고리", "금액", "메모"])
 if "last_ocr_result" not in st.session_state: st.session_state.last_ocr_result = None
 if "ocr_results" not in st.session_state: st.session_state.ocr_results = []
+if "uploader_key" not in st.session_state: st.session_state.uploader_key = 0
 
 st.markdown("""
 <div class="hero-card">
@@ -974,7 +975,7 @@ with tab3:
 with tab4:
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<p class="small-muted">영수증 사진을 올리면 텍스트/금액/카테고리를 추정합니다.</p>', unsafe_allow_html=True)
-    receipt_files = st.file_uploader("영수증 이미지 업로드", type=["png", "jpg", "jpeg", "webp"], key="receipt_uploader", accept_multiple_files=True)
+    receipt_files = st.file_uploader("영수증 이미지 업로드", type=["png", "jpg", "jpeg", "webp"], key=f"receipt_uploader_{st.session_state.uploader_key}", accept_multiple_files=True)
     st.info("📸 인식률을 높이려면: 영수증을 평평하게 펴고 화면에 꽉차게 정면으로 촬영해주세요.")
     if receipt_files:
         if st.button("OCR 분석 실행", use_container_width=True):
@@ -1004,6 +1005,7 @@ with tab4:
                 st.session_state.ocr_results.pop(
                     st.session_state.ocr_results.index(valid_ocr[idx])
                 )
+                st.session_state.uploader_key += 1
                 st.rerun()
         if st.button("지출 내역에 추가", use_container_width=True):
             added = 0
@@ -1019,6 +1021,7 @@ with tab4:
                 added += 1
             st.session_state.transaction_records = load_transactions(user_id)
             st.session_state.ocr_results = []
+            st.session_state.uploader_key += 1
             st.success(f"{added}건을 지출 내역에 추가했어요.")
             st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
