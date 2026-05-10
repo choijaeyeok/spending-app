@@ -870,17 +870,13 @@ with tab1:
         tx_view = tx_view.sort_values("날짜", ascending=False)
         tx_view["날짜"] = tx_view["날짜"].dt.strftime("%Y-%m-%d")
         st.write("### 거래 내역")
-        hdr = st.columns([2, 1, 2, 2, 2, 0.5])
-        for col, name in zip(hdr, ["날짜", "구분", "카테고리", "금액", "메모", ""]):
-            col.markdown(f"**{name}**")
+        st.markdown('<div style="border-bottom:2px solid #e2e8f0;padding-bottom:4px;margin-bottom:2px;font-weight:600;font-size:.82em;color:#6b7280">날짜 · 구분 · 카테고리 · 금액 · 메모</div>', unsafe_allow_html=True)
         for _, row in tx_view.iterrows():
-            c1, c2, c3, c4, c5, c6 = st.columns([2, 1, 2, 2, 2, 0.5])
-            c1.write(row["날짜"])
-            c2.write(row["구분"])
-            c3.write(row["카테고리"])
-            c4.write(f"{int(row['금액']):,}원")
-            c5.write(row["메모"])
-            if c6.button("✕", key=f"del_tx_{row['_id']}"):
+            c1, c2 = st.columns([11, 1])
+            with c1:
+                memo_part = f" · {row['메모']}" if str(row.get("메모", "")).strip() else ""
+                st.markdown(f"{row['날짜']} · {row['구분']} · {row['카테고리']} · **{int(row['금액']):,}원**{memo_part}")
+            if c2.button("✕", key=f"del_tx_{row['_id']}"):
                 delete_transaction(row["_id"])
                 st.session_state.transaction_records = load_transactions(user_id)
                 st.rerun()
@@ -1001,15 +997,12 @@ with tab4:
             st.rerun()
     if not st.session_state.receipt_records.empty:
         st.write("### 영수증 분석 기록")
-        hdr = st.columns([3, 2, 2, 0.5])
-        for col, name in zip(hdr, ["메뉴", "추정금액", "카테고리", ""]):
-            col.markdown(f"**{name}**")
+        st.markdown('<div style="border-bottom:2px solid #e2e8f0;padding-bottom:4px;margin-bottom:2px;font-weight:600;font-size:.82em;color:#6b7280">메뉴 · 추정금액 · 카테고리</div>', unsafe_allow_html=True)
         for _, row in st.session_state.receipt_records.iterrows():
-            c1, c2, c3, c4 = st.columns([3, 2, 2, 0.5])
-            c1.write(row["메뉴"])
-            c2.write(f"{int(row['추정금액']):,}원")
-            c3.write(row["카테고리"])
-            if c4.button("✕", key=f"del_rc_{row['_id']}"):
+            c1, c2 = st.columns([11, 1])
+            with c1:
+                st.markdown(f"{row['메뉴']} · **{int(row['추정금액']):,}원** · {row['카테고리']}")
+            if c2.button("✕", key=f"del_rc_{row['_id']}"):
                 delete_receipt(row["_id"])
                 st.session_state.receipt_records = load_receipts(user_id)
                 st.rerun()
