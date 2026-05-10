@@ -994,7 +994,11 @@ with tab4:
             st.success(f"{len(receipt_files)}개 분석 완료!")
     if st.session_state.ocr_results:
         st.table(pd.DataFrame(st.session_state.ocr_results))
-        if st.button("지출 내역에 추가", use_container_width=True):
+        _c1, _c2 = st.columns(2)
+        if _c2.button("결과 지우기", use_container_width=True):
+            st.session_state.ocr_results = []
+            st.rerun()
+        if _c1.button("지출 내역에 추가", use_container_width=True):
             added = 0
             for r in st.session_state.ocr_results:
                 if r["메뉴"] == "오류":
