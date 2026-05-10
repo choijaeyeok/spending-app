@@ -734,7 +734,7 @@ st.markdown("""
 .m-tbl { border-collapse: collapse; font-size: .9em; min-width: 360px; width: 100%; }
 .m-tbl th { background: #f8fafc; padding: 7px 12px; border-bottom: 2px solid #e2e8f0; white-space: nowrap; text-align: left; font-weight: 600; }
 .m-tbl td { padding: 6px 12px; border-bottom: 1px solid #f1f5f9; }
-[data-testid="stHorizontalBlock"] { flex-wrap: nowrap !important; align-items: center !important; }
+[data-testid="stHorizontalBlock"] { align-items: center !important; }
 footer { visibility: hidden !important; }
 [data-testid="stSidebar"] { display: none !important; }
 [data-testid="collapsedControl"] { display: none !important; }
@@ -876,7 +876,7 @@ with tab1:
         tx_view["날짜"] = tx_view["날짜"].dt.strftime("%Y-%m-%d")
         st.write("### 거래 내역")
         for _, row in tx_view.iterrows():
-            c1, c2 = st.columns([10, 1])
+            c1, c2 = st.columns([5, 1])
             with c1:
                 memo_part = f" · {row['메모']}" if str(row.get("메모", "")).strip() else ""
                 st.markdown(f"{row['날짜']} · {row['구분']} · {row['카테고리']} · **{int(row['금액']):,}원**{memo_part}")
@@ -1002,7 +1002,7 @@ with tab4:
     if not st.session_state.receipt_records.empty:
         st.write("### 영수증 분석 기록")
         for _, row in st.session_state.receipt_records.iterrows():
-            c1, c2 = st.columns([10, 1])
+            c1, c2 = st.columns([5, 1])
             with c1:
                 st.markdown(f"{row['메뉴']} · **{int(row['추정금액']):,}원** · {row['카테고리']}")
             if c2.button("✕", key=f"del_rc_{row['_id']}"):
